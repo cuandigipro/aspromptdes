@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Description Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to right, #f8fafc, #eef2f5);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 2.5rem 3rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+            margin-top: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            border: 2px dashed #cbd5e1;
+            background-color: #f8fafc;
+            color: #475569;
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            height: 150px;
+        }
+        .custom-file-upload:hover {
+            background-color: #f1f5f9;
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .custom-file-upload:hover svg {
+            transform: scale(1.1);
+        }
+        .custom-file-upload svg {
+            transition: transform 0.3s ease;
+            margin-bottom: 0.75rem;
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e2e8f0;
+            display: none; /* Hidden by default */
+        }
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: none;
+            transform: translateY(0);
+        }
+        button:hover {
+            background-color: #2563eb;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+            transform: translateY(-3px);
+            cursor: pointer;
+        }
+        button:active {
+            background-color: #1d4ed8;
+            box-shadow: 0 2px 10px rgba(59, 130, 246, 0.2);
+            transform: translateY(1px);
+        }
+        button:disabled {
+            background-color: #93c5fd;
+            color: white;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: translateY(0);
+        }
+        #generateButton {
+            margin: 2.5rem 0;
+            padding: 1.5rem 4rem;
+            font-weight: 700;
+            background-color: #6b7280;
+            box-shadow: 0 4px 15px rgba(107, 114, 128, 0.25);
+            color: #ffffff;
+        }
+        #generateButton:hover {
+            background-color: #3b82f6;
+            color: #ffffff;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+        }
+        #generateButton:active {
+            background-color: #374151;
+            box-shadow: 0 2px 10px rgba(55, 65, 81, 0.2);
+        }
+        #generateButton:disabled {
+            background-color: #d1d5db;
+            color: #9ca3af;
+            box-shadow: none;
+        }
+        .description-output-container {
+            position: relative;
+            margin-top: 2rem;
+        }
+        .description-output {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            text-align: left;
+            min-height: 120px;
+            color: #1e293b;
+            white-space: pre-wrap;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        #copyButton {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background-color: #e2e8f0;
+            color: #475569;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: none;
+            margin-top: 0;
+        }
+        #copyButton:hover {
+            background-color: #cbd5e1;
+            color: #1e293b;
+            transform: translateY(-1px);
+        }
+        #copyButton:active {
+            transform: translateY(0);
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 1.5rem auto;
+            display: none; /* Hidden by default */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: #ef4444;
+            background-color: #fee2e2;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-top: 1.5rem;
+            display: none; /* Hidden by default */
+            font-weight: 500;
+        }
+        .api-key-container {
+            margin-top: 1.5rem; /* Restored for consistent spacing */
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            /* margin-bottom is now handled by the generate button below */
+        }
+        #apiKeyInput {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #cbd5e1;
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        #apiKeyInput::placeholder {
+            color: #94a3b8;
+        }
+        #apiKeyInput:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container">
+        <h1 class="text-4xl font-extrabold text-gray-800 mb-4">AI Image Prompt Generator</h1>
+        <p class="text-gray-600 mb-8 max-w-xl mx-auto">Upload an image and our AI will generate a detailed text prompt, perfect for use with image generation tools like Midjourney or Leonardo AI.</p>
+
+        <label for="imageUpload" class="custom-file-upload">
+            <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            <span id="upload-text">Drag & Drop or Click to Upload</span>
+        </label>
+        <input type="file" id="imageUpload" accept="image/*">
+
+        <img id="imagePreview" class="image-preview mx-auto" src="#" alt="Image Preview">
+
+        <div class="api-key-container">
+             <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API Key">
+        </div>
+
+        <button id="generateButton" disabled>Generate Description</button>
+
+        <div id="loadingSpinner" class="loading-spinner"></div>
+
+        <div id="errorMessage" class="error-message"></div>
+
+        <div class="description-output-container">
+             <button id="copyButton">Copy</button>
+            <div class="description-output" id="descriptionOutput">The generated description will appear here.</div>
+        </div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const imageUpload = document.getElementById('imageUpload');
+        const imagePreview = document.getElementById('imagePreview');
+        const generateButton = document.getElementById('generateButton');
+        const descriptionOutput = document.getElementById('descriptionOutput');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const errorMessage = document.getElementById('errorMessage');
+        const customFileUpload = document.querySelector('.custom-file-upload');
+        const uploadText = document.getElementById('upload-text');
+        const copyButton = document.getElementById('copyButton');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        let base64ImageData = null; // Variable to store Base64 image data
+        // Event listener for file input
+        imageUpload.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        // Drag and drop event listeners
+        customFileUpload.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            customFileUpload.style.borderColor = '#3b82f6';
+        });
+        customFileUpload.addEventListener('dragleave', (event) => {
+            event.preventDefault();
+            customFileUpload.style.borderColor = '#cbd5e1';
+        });
+        customFileUpload.addEventListener('drop', (event) => {
+            event.preventDefault();
+            customFileUpload.style.borderColor = '#cbd5e1';
+            const file = event.dataTransfer.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        function handleFile(file) {
+            if (file) {
+                // Hide error message
+                errorMessage.style.display = 'none';
+                // Display the selected file name in the custom label
+                uploadText.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Display image preview
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    // Extract Base64 data
+                    base64ImageData = e.target.result.split(',')[1];
+                    // Enable generate button
+                    generateButton.disabled = false;
+                    // Reset description area
+                    descriptionOutput.textContent = 'The generated description will appear here.';
+                };
+                reader.onerror = function() {
+                    // Handle file reader errors
+                    errorMessage.textContent = 'Failed to read image file.';
+                    errorMessage.style.display = 'block';
+                    generateButton.disabled = true;
+                    imagePreview.style.display = 'none';
+                    uploadText.textContent = 'Drag & Drop or Click to Upload';
+                };
+                reader.readAsDataURL(file); // Read file as data URL (Base64)
+            }
+        }
+        // Event listener for generate button
+        generateButton.addEventListener('click', async function() {
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!base64ImageData) {
+                errorMessage.textContent = 'Please upload an image first.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            if (!apiKey) {
+                errorMessage.textContent = 'Please enter your Gemini API Key.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            // Hide error message and previous description
+            errorMessage.style.display = 'none';
+            descriptionOutput.textContent = '';
+            // Show loading spinner
+            loadingSpinner.style.display = 'block';
+            generateButton.disabled = true; // Disable button while loading
+            try {
+                // Define a single, balanced prompt for image generation
+                const prompt = "Describe this image concisely but comprehensively, focusing on key subjects, actions, environment, and any notable details or styles that would be useful for an AI image generator like Midjourney or Leonardo AI. The description should be a single, coherent text prompt in English, similar to: 'Close-up shot of three mooncakes stacked on a white plate, showcasing their intricate patterns and glossy, golden-brown crusts; shallow depth of field, smooth gray marble surface, dark background, warm lighting, food photography.'";
+                // Prepare payload for Gemini API
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: prompt },
+                                {
+                                    inlineData: {
+                                        mimeType: imageUpload.files[0].type, // Use mimeType from the uploaded file
+                                        data: base64ImageData
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                };
+                // API Key is now taken from the input field
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                // Make API call
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    const errorDetail = await response.json();
+                    throw new Error(`API Error: ${response.status} ${response.statusText} - ${JSON.stringify(errorDetail)}`);
+                }
+                const result = await response.json();
+                // Check and display the generated description
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    descriptionOutput.textContent = text;
+                } else {
+                    descriptionOutput.textContent = 'Could not generate a description for this image. Try another image.';
+                }
+            } catch (error) {
+                // Handle errors and display message to user
+                console.error('Error generating description:', error);
+                errorMessage.textContent = `An error occurred: ${error.message || 'Failed to generate image description.'}`;
+                errorMessage.style.display = 'block';
+                descriptionOutput.textContent = 'An error occurred while processing your image.';
+            } finally {
+                // Hide loading spinner and re-enable button
+                loadingSpinner.style.display = 'none';
+                generateButton.disabled = false;
+            }
+        });
+
+        // Copy to clipboard functionality
+        copyButton.addEventListener('click', function() {
+            const textToCopy = descriptionOutput.textContent;
+            if (navigator.clipboard && textToCopy && textToCopy !== 'The generated description will appear here.') {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    copyButton.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyButton.textContent = 'Copy';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            }
+        });
+    </script>
+</body>
+</html> 
